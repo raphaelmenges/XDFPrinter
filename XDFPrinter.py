@@ -72,74 +72,98 @@ for i in range(len(streams)):
     text.append("Data Format: "   + dataFormat)
     text.append("Identifier: "    + identifier)
     
+    '''
+    
     # Announce extraction of child values
     text.append("Child Values:")
     
      # Extract child values
     children = streamInfo['desc'][0]
     
-    # Go over values
-    for childKey in children:
-        
-        # Fetch value by key
-        childValue = children[childKey][0]
-        
-        # Is value a sequence ("append_child_value")
-        if(isinstance(childValue, collections.Sequence)):
-            text.append("   " + childKey + ": " + childValue)
+    # Go over values if available
+    if not(children is None): # only continue when there are children
+        for childKey in children:
             
-        # Is value a mapping ("append_child")
-        elif(isinstance(childValue, collections.Mapping)):
-            text.append("   " + childKey)
+            # Fetch value by key
+            childValue = children[childKey][0]
             
-            # Value of child is a dictionary that has to be traversed
-            for childValueKey in childValue: # go over all collected unique children
+            # Catch empty value
+            if childValue is None:
+                continue
+            
+            # Is value a sequence ("append_child_value")
+            if(isinstance(childValue, collections.Sequence)):
+                text.append("   " + childKey + ": " + childValue)
                 
-                # The XDF structure seams to collect all inner children with the same name
-                # and then creates a dictionary to distinguish between the children. Here
-                # we are inside one of those unified structures                
-                for innerChildValues in childValue[childValueKey]: # go over data sets of unified children
+            # Is value a mapping ("append_child")
+            elif(isinstance(childValue, collections.Mapping)):
+                text.append("   " + childKey)
+                
+                # Value of child is a dictionary that has to be traversed
+                for childValueKey in childValue: # go over all collected unique children
+                
+                    # Catch empty childValueKey
+                    if childValueKey is None:
+                        continue
                     
-                    # Add new inner child to the info header
-                    text.append("   " + "   " + childValueKey)
+                    # The XDF structure seams to collect all inner children with the same name
+                    # and then creates a dictionary to distinguish between the children. Here
+                    # we are inside one of those unified structures                
+                    for innerChildValues in childValue[childValueKey]: # go over data sets of unified children
                     
-                    # Now go over information of single asset within unified structure (like information about one channel)
-                    for innerChildKey in innerChildValues: # go over extracted data set
-                        text.append("   " + "   " + "   " + innerChildKey + ": " + innerChildValues[innerChildKey][0])
+                        # Catch empty innerChildValues
+                        if innerChildValues is None:
+                            continue
                         
+                        # Add new inner child to the info header
+                        text.append("   " + "   " + childValueKey)
+                        
+                        # Now go over information of single asset within unified structure (like information about one channel)
+                        for innerChildKey in innerChildValues: # go over extracted data set
+                            
+                            # Catch empty inner child key
+                            if innerChildKey is None:
+                                continue
+                        
+                            # Append value to text output (TODO: fix that)
+                            text.append("   " + "   " + "   " + innerChildKey + ": " + innerChildValues[innerChildKey][0])
+                        
+    '''
+    
     # Aquired data
     text.append("Data:")
     text.append("   " + "Time Stamp Count:  " + str(len(streams[i]['time_stamps'])))
     text.append("   " + "Sample Data Count: " + str(len(streams[i]['time_series'])))
     
-    # Check aquired data in detail
+    # Check aquired data in details
     timeSeries = streams[i]['time_series']
-    dataChannelCount = len(timeSeries[0])
-    text.append("   " + "Channel Count: " + str(dataChannelCount))
-    
-    # Go over data and extract information for each channel
-    text.append("   " + "Channel Data:")
-    for j in range(dataChannelCount): # go over channels
-        text.append("   " + "   " + "Channel " + str(j) + ":")
+    if not(len(timeSeries) == 0): # only continue when there are timestamps
+        dataChannelCount = len(timeSeries[0])
+        text.append("   " + "Channel Count: " + str(dataChannelCount))
         
-        # Go over all entries for that channel
-        meanValue = 0
-        minValue = sys.maxint
-        maxValue = -sys.maxint - 1
-        for k in range(len(timeSeries)): # go over times
+        # Go over data and extract information for each channel
+        text.append("   " + "Channel Data:")
+        for j in range(dataChannelCount): # go over channels
+            text.append("   " + "   " + "Channel " + str(j) + ":")
             
-            # Update Values
-            value = timeSeries[k][j] # first row, then column
-            meanValue += value # mean
-            minValue = value if minValue > value else minValue # min
-            maxValue = value if maxValue < value else maxValue # max
-            
-        # Print results
-        meanValue = meanValue / len(timeSeries)
-        text.append("   " + "   " + "   " + "Mean: " + str(meanValue))
-        text.append("   " + "   " + "   " + "Min:  " + str(minValue)) 
-        text.append("   " + "   " + "   " + "Max:  " + str(maxValue)) 
-                        
+            # Go over all entries for that channel
+            meanValue = 0
+            minValue = sys.maxint
+            maxValue = -sys.maxint - 1
+            for k in range(len(timeSeries)): # go over times
+                
+                # Update Values
+                value = timeSeries[k][j] # first row, then column
+                meanValue += value # mean
+                minValue = value if minValue > value else minValue # min
+                maxValue = value if maxValue < value else maxValue # max
+                
+            # Print results
+            meanValue = meanValue / len(timeSeries)
+            text.append("   " + "   " + "   " + "Mean: " + str(meanValue))
+            text.append("   " + "   " + "   " + "Min:  " + str(minValue)) 
+            text.append("   " + "   " + "   " + "Max:  " + str(maxValue)) 
+                            
     text.append("--------------------")
     
 easygui.codebox("Output for file: " + filepath, "XDF Printer", '\n'.join(text))
